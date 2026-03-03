@@ -15,6 +15,7 @@ import { ErrorNotification } from './components/ErrorNotification';
 import { TodoList } from './components/TodoList';
 import { TodoFooter } from './components/TodoFooter';
 import { TodoHeader } from './components/TodoHeader';
+import { ErrorMessage } from './types/ErrorMessage';
 
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -33,7 +34,7 @@ export const App: React.FC = () => {
     TODO_STATUS.ALL,
   );
   const [loadingTodoIds, setloadingTodoIds] = useState<number[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<ErrorMessage | null>(null);
 
   useEffect(() => {
     getTodos()
@@ -41,7 +42,7 @@ export const App: React.FC = () => {
         setTodos(data);
       })
       .catch(() => {
-        setErrorMessage('Unable to load todos');
+        setErrorMessage(ErrorMessage.LoadTodos);
       });
   }, []);
 
@@ -51,7 +52,7 @@ export const App: React.FC = () => {
     }
 
     const timerId = setTimeout(() => {
-      setErrorMessage('');
+      setErrorMessage(null);
     }, 3000);
 
     return () => {
@@ -82,13 +83,16 @@ export const App: React.FC = () => {
     { active: 0, completed: 0, filtered: [] as Todo[] },
   );
 
+  const isAllCompleted =
+    todos.length > 0 && todos.length === todosCompletedCount;
+
   const handleAddTodo = async () => {
-    setErrorMessage('');
+    setErrorMessage(null);
 
     const trimmed = todoQuery.trim();
 
     if (!trimmed) {
-      setErrorMessage('Title should not be empty');
+      setErrorMessage(ErrorMessage.EmptyTitle);
 
       return;
     }
@@ -115,7 +119,7 @@ export const App: React.FC = () => {
       setTodos(prev => [...prev, createdTodo]);
       setTodoQuery('');
     } catch {
-      setErrorMessage('Unable to add a todo');
+      setErrorMessage(ErrorMessage.AddTodo);
     } finally {
       setTempTodo(null);
       setIsAdding(false);
@@ -135,14 +139,14 @@ export const App: React.FC = () => {
       setTodos(prev => prev.filter(todo => todo.id !== id));
       focusNewTodo();
     } catch (error) {
-      setErrorMessage('Unable to delete a todo');
+      setErrorMessage(ErrorMessage.DeleteTodo);
     } finally {
       setloadingTodoIds(prev => prev.filter(todoId => todoId !== id));
     }
   };
 
   const handleClearCompleted = async () => {
-    setErrorMessage('');
+    setErrorMessage(null);
 
     const completedIds = todos.filter(t => t.completed).map(t => t.id);
 
@@ -159,7 +163,7 @@ export const App: React.FC = () => {
       return;
     }
 
-    setErrorMessage('');
+    setErrorMessage(null);
     setloadingTodoIds(prev =>
       prev.includes(todo.id) ? prev : [...prev, todo.id],
     );
@@ -173,8 +177,8 @@ export const App: React.FC = () => {
         ),
       );
     } catch {
-      setErrorMessage('Unable to update a todo');
-      throw new Error('Unable to update a todo');
+      setErrorMessage(ErrorMessage.UpdateTodo);
+      throw new Error(ErrorMessage.UpdateTodo);
     } finally {
       setloadingTodoIds(prev => prev.filter(id => id !== todo.id));
     }
@@ -185,7 +189,7 @@ export const App: React.FC = () => {
   };
 
   const handleToggleAllStatus = async () => {
-    setErrorMessage('');
+    setErrorMessage(null);
 
     const targetCompleted = todosCompletedCount < todos.length ? true : false;
 
@@ -216,9 +220,7 @@ export const App: React.FC = () => {
             shouldFocusNewTodo={editedTodoId === null}
             inputRef={newTodoRef}
             onAddTodo={handleAddTodo}
-            isAllCompleted={
-              todos.length > 0 && todos.length === todosCompletedCount
-            }
+            isAllCompleted={isAllCompleted}
             isToggleBtn={todos.length > 0}
             isAdding={isAdding}
             onToggleAllStatus={handleToggleAllStatus}
@@ -249,7 +251,7 @@ export const App: React.FC = () => {
 
         <ErrorNotification
           message={errorMessage}
-          onClose={() => setErrorMessage('')}
+          onClose={() => setErrorMessage(null)}
         />
       </div>
     </>
